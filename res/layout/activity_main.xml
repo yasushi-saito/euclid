@@ -26,18 +26,30 @@
          android:orientation="horizontal"
          android:layout_width="fill_parent"
          android:layout_height="wrap_content">
-       <Button
-           android:id="@+id/button_line"
-           android:text="Line"
+       <RadioGroup
+           android:id="@+id/radiogroup"
            android:layout_width="wrap_content"
            android:layout_height="wrap_content"
-           />
-       <Button
-           android:id="@+id/button_circle"
-           android:text="Circle"
-           android:layout_width="wrap_content"
-           android:layout_height="wrap_content"
-           />
+           android:orientation="horizontal">
+         <RadioButton
+             android:id="@+id/button_move"
+             android:text="Move"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             />
+         <RadioButton
+             android:id="@+id/button_line"
+             android:text="Line"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             />
+         <RadioButton
+             android:id="@+id/button_circle"
+             android:text="Circle"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             />
+       </RadioGroup>
      </LinearLayout>
    </LinearLayout>
 </RelativeLayout>

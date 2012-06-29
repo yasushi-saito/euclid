@@ -16,9 +16,15 @@ public class CanvasModel {
 		mUserDefinedPoints.add(p);
 	}
 	
+	public void setTempShape(Shape s) {
+		mTempShape = s;
+	}
+	
 	Vector<Shape> shapes() { return mShapes; }
+	Shape tempShape() { return mTempShape; }
 	Vector<Point.UserDefined> userDefinedPoints() { return mUserDefinedPoints; }
 	
 	private final Vector<Shape> mShapes;
+	private Shape mTempShape;
 	private final Vector<Point.UserDefined> mUserDefinedPoints;
 }

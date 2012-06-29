@@ -27,11 +27,11 @@ class CanvasView extends View implements View.OnTouchListener {
 	public boolean onTouch(View v, MotionEvent event) {
 	    int action = event.getAction();
 	    if (action == MotionEvent.ACTION_DOWN) {
-	    	mController.onMoveStart(event.getX(), event.getY());
+	    	mController.onTouchStart(event.getX(), event.getY());
 		} else if (action == MotionEvent.ACTION_MOVE) {
-	    	mController.onMove(event.getX(), event.getY());
+	    	mController.onTouchMove(event.getX(), event.getY());
 		} else if (action == MotionEvent.ACTION_UP) {
-	    	mController.onMoveEnd(event.getX(), event.getY());
+	    	mController.onTouchEnd(event.getX(), event.getY());
 		}
 	    return true;
 	}
@@ -40,18 +40,23 @@ class CanvasView extends View implements View.OnTouchListener {
 		Vector<Shape> shapes = mModel.shapes();
 		final int n = shapes.size();
 		for (int i = 0; i < n; ++i) {
-			Shape shape = shapes.get(i);
-			if (shape instanceof Shape.Circle) {
-				drawCircle(canvas, (Shape.Circle)shape);
-				continue;
-			}
-			if (shape instanceof Shape.Line) {
-				drawLine(canvas, (Shape.Line)shape); 
-				continue;
-			}
+			drawShape(canvas, shapes.get(i));
+		}
+		Shape temp = mModel.tempShape();
+		if (temp != null) drawShape(canvas, temp);
+	}
+
+	private void drawShape(Canvas canvas, Shape shape) {
+		if (shape instanceof Shape.Circle) {
+			drawCircle(canvas, (Shape.Circle)shape);
+			return;
+		}
+		if (shape instanceof Shape.Line) {
+			drawLine(canvas, (Shape.Line)shape); 
+			return;
 		}
 	}
-	
+
 	private void drawPoint(Canvas canvas, float x, float y) {
 		Paint p = new Paint();
 		p.setStyle(Paint.Style.FILL_AND_STROKE);
