@@ -14,11 +14,11 @@ public class CanvasController {
 		Vector<Point.UserDefined> points = mModel.userDefinedPoints();
 		mSelectedPoint = null;
 		final int n = points.size();
-		float minDistance = 99999;
+		float minDistance = 9000;
 		for (int i = 0; i < n; ++i) {
 			Point.UserDefined point = points.get(i);
 			float d = Point.distanceFrom(point, x, y);
-			if (d < 20.0 && d < minDistance) {
+			if (d < minDistance) {
 				minDistance = d;
 				mSelectedPoint = point;
 			}

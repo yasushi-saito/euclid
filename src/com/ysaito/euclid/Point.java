@@ -7,7 +7,7 @@ public abstract class Point {
 	static public float distanceFrom(Point p, float x, float y) {
 		final float dx = p.x() - x;
 		final float dy = p.y() - y;
-		return (float)Math.sqrt(dx * dx - dy * dy);
+		return (float)Math.sqrt(dx * dx + dy * dy);
 	}
 	
 	static public class UserDefined extends Point {
