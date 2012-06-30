@@ -17,17 +17,17 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         mModel = new CanvasModel();
         
-        Point.UserDefined p0 = new Point.UserDefined(100, 100);
+        Point.Explicit p0 = new Point.Explicit(100, 100);
         mModel.addUserDefinedPoint(p0);
-        Point.UserDefined p1 = new Point.UserDefined(110, 110);
+        Point.Explicit p1 = new Point.Explicit(110, 110);
         mModel.addUserDefinedPoint(p1);
         mModel.addShape(new Shape.Circle(p0, p1));
 
-        Point.UserDefined p2 = new Point.UserDefined(50, 50);
+        Point.Explicit p2 = new Point.Explicit(50, 50);
         mModel.addUserDefinedPoint(p2);
         mModel.addShape(new Shape.Line(p0, p2));
         
-        Point.UserDefined p3 = new Point.UserDefined(80, 80);
+        Point.Explicit p3 = new Point.Explicit(80, 80);
         mModel.addUserDefinedPoint(p3);
         mModel.addShape(new Shape.Line(p1, p3)); 
         CanvasView canvasView = (CanvasView)findViewById(R.id.canvasview);
