@@ -26,19 +26,24 @@ public abstract class Point {
 	}
 	
 	static public class Derived extends Point {
+		private int mN;
 		public final Shape shape0, shape1;
 		public StateId.NonLeaf mStateId;
 		public float mX, mY;
 		
-		public Derived(Shape s0, Shape s1) {
+		public Derived(Shape s0, Shape s1, float nearX, float nearY) {
 			shape0 = s0;
 			shape1 = s1;
 			mStateId = new StateId.NonLeaf(s0.stateId(), s1.stateId());
+			mStateId.maybeUpdateId();
+			mN = 0;
 		}
 		
 		private void maybeRefreshState() {
 			if (mStateId.maybeUpdateId()) {
 				ShapeIntersection intersection = Shape.intersection(shape0, shape1);
+				mX = intersection.x(mN);
+				mY = intersection.y(mN);				
 			}
 		}
 		public float x() {

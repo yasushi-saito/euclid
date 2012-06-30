@@ -11,13 +11,9 @@ public class CanvasController {
 	static final int DRAW_CIRCLE = 3;
 	int mMode;
 	
-	Point.Explicit mPointToMove;
-	
+	Point.Explicit mCurrentPoint;
 	Point mLineAnchor;
-	Point.Explicit mLineTarget;
-	
 	Point mCircleAnchor;
-	Point.Explicit mCircleTarget;	
 	
 	public CanvasController(CanvasModel model, CanvasView view) {
 		mModel = model;
@@ -28,46 +24,51 @@ public class CanvasController {
 		if (mMode == MOVE) {
 			PointAndDistance pd = findNearestUserDefinedPoint(x, y);
 			if (pd != null) {
-				mPointToMove = pd.point;
+				mCurrentPoint = pd.point;
 			}
 		} else if (mMode == DRAW_LINE) {
 			mLineAnchor = pickNearbyPoint(x, y);
 			if (mLineAnchor == null) {
 				mLineAnchor = new Point.Explicit(x,  y);
 			}
-			mLineTarget = new Point.Explicit(x,  y);
+			mCurrentPoint = new Point.Explicit(x,  y);
 		} else if (mMode == DRAW_CIRCLE) {
 			mCircleAnchor = pickNearbyPoint(x, y);
 			if (mCircleAnchor == null) {
 				mCircleAnchor = new Point.Explicit(x,  y);
 			}
-			mCircleTarget = new Point.Explicit(x,  y);
+			mCurrentPoint = new Point.Explicit(x,  y);
 		}
 		onTouchMove(x, y);
 	}
 	public void onTouchEnd(float x, float y) {
 		onTouchMove(x, y);
 		if (mLineAnchor != null) {
-			mModel.addShape(new Shape.Line(mLineAnchor, mLineTarget));
+			if (mLineAnchor instanceof Point.Explicit){
+				mModel.addUserDefinedPoint((Point.Explicit)mLineAnchor);
+			}
+			mModel.addUserDefinedPoint(mCurrentPoint);
+			mModel.addShape(new Shape.Line(mLineAnchor, mCurrentPoint));
 		} else if (mCircleAnchor != null) {
-			mModel.addShape(new Shape.Circle(mCircleAnchor, mCircleTarget));
+			if (mCircleAnchor instanceof Point.Explicit){
+				mModel.addUserDefinedPoint((Point.Explicit)mCircleAnchor);
+			}
+			mModel.addUserDefinedPoint(mCurrentPoint);
+			mModel.addShape(new Shape.Circle(mCircleAnchor, mCurrentPoint));
 		}
-		mPointToMove = null;
+		mCurrentPoint = null;
 		mLineAnchor = null;
-		mLineTarget = null;
 		mCircleAnchor = null;
-		mCircleTarget = null;
 		mModel.setTempShape(null);
 	}
 	public void onTouchMove(float x, float y) {
-		if (mPointToMove != null) {
-			mPointToMove.moveTo(x, y);
-		} else if (mLineAnchor != null) {
-			mLineTarget.moveTo(x,  y);
-			mModel.setTempShape(new Shape.Line(mLineAnchor, mLineTarget));
-		} else if (mCircleAnchor != null) {
-			mCircleTarget.moveTo(x,  y);
-			mModel.setTempShape(new Shape.Circle(mCircleAnchor, mCircleTarget));
+		if (mCurrentPoint != null) {
+			mCurrentPoint.moveTo(x, y);
+			if (mLineAnchor != null) {
+				mModel.setTempShape(new Shape.Line(mLineAnchor, mCurrentPoint));
+			} else if (mCircleAnchor != null) {
+				mModel.setTempShape(new Shape.Circle(mCircleAnchor, mCurrentPoint));
+			}
 		}
 		mView.redraw();
 	}
@@ -97,14 +98,14 @@ public class CanvasController {
 			}
 		}
 		if (nearestShapes != null) {
-			return Shape.Derived(nearestShapes.shape1, nearestShapes.shape2);
+			return new Point.Derived(nearestShapes.shape1, nearestShapes.shape2, x, y);
 		}
 		return null;
 	}
 	
 	private ShapesAndDistance findNearestShapeIntersection(float x, float y) {
-		Vector<Shape> shapes= mModel.shapes();
-		Vector<ShapesAndDistance> nearbyShapes;
+		Vector<Shape> shapes = mModel.shapes();
+		Vector<ShapesAndDistance> nearbyShapes = null;
 		int n = shapes.size();
 		for (int i = 0; i < n; ++i) {
 			Shape shape = shapes.get(i);
@@ -117,7 +118,7 @@ public class CanvasController {
 				nearbyShapes.add(sd);
 			}
 		}
-		if (nearbyShapes.size() == 0) return null;
+		if (nearbyShapes == null) return null;
 		n = nearbyShapes.size();
 		
 		ShapesAndDistance candidate = new ShapesAndDistance();
@@ -127,9 +128,9 @@ public class CanvasController {
 			Shape s1 = shapes.get(i);
 			for (int j = i + 1; j < n; ++j) {
 				Shape s2 = shapes.get(j);
-				Point.Explicit point= s1.intersection(s2);
-				if (p != null) {
-					float d = Util.distance(point.x(), point.y(), x, y);
+				ShapeIntersection intersection = Shape.intersection(s1,  s2);
+				if (intersection != null) {
+					float d = intersection.minDistanceFrom(x, y);
 					if (d < candidate.distance) {
 						candidate.distance = d;
 						candidate.shape1 = s1;

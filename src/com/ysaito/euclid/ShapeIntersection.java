@@ -16,6 +16,12 @@ public class ShapeIntersection {
 		mY2 = y2;
 	}
 	
+	public float minDistanceFrom(float x, float y) {
+		float d1 = Util.distance(x, y, mX1, mY1);
+		float d2 = (mSize > 1) ? Util.distance(x, y, mX2, mY2) : 9999;
+		return Math.min(d1, d2);
+	}
+	
 	public int size() { return mSize; }
 	public float x(int index) { 
 		if (index == 0) return mX1;
