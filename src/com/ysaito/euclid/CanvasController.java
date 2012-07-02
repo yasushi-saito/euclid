@@ -2,6 +2,8 @@ package com.ysaito.euclid;
 
 import java.util.Vector;
 
+import android.util.Log;
+
 public class CanvasController {
 	final CanvasModel mModel;
 	final CanvasView mView;
@@ -103,6 +105,8 @@ public class CanvasController {
 		return null;
 	}
 	
+	private final String TAG = "CanvasController";
+	
 	private ShapesAndDistance findNearestShapeIntersection(double x, double y) {
 		Vector<Shape> shapes = mModel.shapes();
 		Vector<ShapesAndDistance> nearbyShapes = null;
@@ -116,6 +120,7 @@ public class CanvasController {
 				sd.shape1 = shape; // shape2 is unused
 				sd.distance = d;
 				nearbyShapes.add(sd);
+				Log.d(TAG, "Add: " + shape.toString() + " distance=" + d);
 			}
 		}
 		if (nearbyShapes == null) return null;
@@ -125,16 +130,20 @@ public class CanvasController {
 		candidate.distance = MAX_SNAP_DISTANCE;
 		
 		for (int i = 0; i < n; ++i) {
-			Shape s1 = shapes.get(i);
+			ShapesAndDistance sd1 = nearbyShapes.get(i);
 			for (int j = i + 1; j < n; ++j) {
-				Shape s2 = shapes.get(j);
-				ShapeIntersection intersection = Shape.intersection(s1,  s2);
+				ShapesAndDistance sd2 = nearbyShapes.get(j);
+				ShapeIntersection intersection = Shape.intersection(sd1.shape1,  sd2.shape1);
+				if (intersection == null) {
+					// Log.d(TAG, "Intersection: " + sd1.shape1.toString() + "," + sd2.shape1.toString() + ": null");
+				}
 				if (intersection != null) {
 					double d = intersection.minDistanceFrom(x, y);
+					// Log.d(TAG, "Intersection: " + sd1.shape1.toString() + "," + sd2.shape1.toString() + ": " + intersection.toString() + " distance=" + d);
 					if (d < candidate.distance) {
 						candidate.distance = d;
-						candidate.shape1 = s1;
-						candidate.shape2 = s2;
+						candidate.shape1 = sd1.shape1;
+						candidate.shape2 = sd2.shape1;
 					}
 				}
 			}

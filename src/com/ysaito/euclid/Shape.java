@@ -3,8 +3,9 @@ package com.ysaito.euclid;
 import android.util.Log;
 
 public abstract class Shape {
-	public abstract StateId stateId();
+	// public abstract StateId stateId();
 	public abstract double distanceFrom(double x, double y);
+	public abstract double addDependency(Shape child);
 	
 	static private ShapeIntersection lineCircleIntersection(Line line, Circle circle) {
 		final double radius = circle.radius();
@@ -111,6 +112,7 @@ public abstract class Shape {
 	static public class Line extends Shape {
 		public final Point p0, p1;
 		public StateId mStateId;
+		public Vector<Shape> mDeps;
 		
 		public Line(Point pp1, Point pp2) {
 			p0 = pp1;
@@ -119,12 +121,15 @@ public abstract class Shape {
 		}
 		
 		public StateId stateId() { return mStateId; }
-		public double distanceFrom(double x, double y) {
-			final double x1 = p0.x();
-			final double y1 = p0.y();
-			final double x2 = p1.x();
-			final double y2 = p1.y();
-			return (x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1) / Util.distance(x1, y1, x2, y2);
+		@Override public double distanceFrom(double x, double y) {
+			final double x0 = p0.x();
+			final double y0 = p0.y();
+			final double x1 = p1.x();
+			final double y1 = p1.y();
+			return Math.abs(((x1 - x0) * (y0 - y) - (x0 - x) * (y1 - y0)) / Util.distance(x0, y0, x1, y1));
+		}
+		@Override public String toString() {
+			return "Point " + p0.toString() + "-" + p1.toString();
 		}
 	}
 	
@@ -146,6 +151,9 @@ public abstract class Shape {
 		public StateId stateId() { return mStateId; }
 		public double distanceFrom(double x, double y) {
 			return Math.abs(Util.distance(center.x(), center.y(), x, y) - radius());
+		}
+		@Override public String toString() {
+			return "Circle center=" + center.toString() + " radius=" + radiusControl.toString();
 		}
 	}
 }

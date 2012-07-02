@@ -2,13 +2,17 @@ package com.ysaito.euclid;
 
 import java.util.Vector;
 
+import android.util.Log;
+
 public class CanvasModel {
+	private final String TAG = "CanvasModel";
 	public CanvasModel() {
 		mShapes = new Vector<Shape>();
 		mUserDefinedPoints = new Vector<Point.Explicit>();
 	}
 	
 	public void addShape(Shape s) {
+		Log.d(TAG, "AddShape:" + s.toString());
 		mShapes.add(s);
 	}
 	

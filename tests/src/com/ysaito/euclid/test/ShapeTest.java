@@ -15,6 +15,12 @@ public class ShapeTest extends AndroidTestCase {
 		return new Shape.Circle(new Point.Explicit(x,  y), new Point.Explicit(x + radius, y));
 	}
 	
+	private void assertNear(double expected, double actual) {
+		String message = "expected=" + expected + ", d2=" + actual;
+		assertTrue(message, actual >= expected - 0.001);
+		assertTrue(message, actual <= expected + 0.001);
+	}
+	
 	private void assertNear(ShapeIntersection si, int index, double x, double y) {
 		String message = si.toString() + " expected=(" + x + "," + y + ")";
 		assertTrue(message, si.x(index) >= x - 0.001);
@@ -57,4 +63,19 @@ public class ShapeTest extends AndroidTestCase {
 		
 		assertNull(Shape.intersection(s1, newCircle(3, 1, 0.95)));
 	}
+	
+	public void testLineDistance() {
+		Shape s1 = newLine(0, 0, 1, 1);
+		assertNear(0.0, s1.distanceFrom(0.5,  0.5));
+		assertNear(0.0, s1.distanceFrom(50.0,  50.0));		
+		assertNear(1.0 / Math.sqrt(2.0), s1.distanceFrom(1.0, 0.0));
+		assertNear(1.0 / Math.sqrt(2.0), s1.distanceFrom(0.0, 1.0));		
+	}
+	
+	public void testCircleDistance() {
+		Shape s1 = newCircle(1, 1, 1);
+		assertNear(1.0, s1.distanceFrom(1, 1));
+		assertNear(0.5, s1.distanceFrom(0.5, 1));
+	}
+	
 }

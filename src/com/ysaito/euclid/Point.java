@@ -15,14 +15,17 @@ public abstract class Point {
 			mStateId = new StateId.Leaf();
 		}
 		
-		public double x() { return mX; }
-		public double y() { return mY; }
+		@Override public double x() { return mX; }
+		@Override public double y() { return mY; }
 		public void moveTo(double x, double y) {
 			mX = x;
 			mY = y;
 			mStateId.updated();
 		}
-		public StateId stateId() { return mStateId; }
+		@Override public StateId stateId() { return mStateId; }
+		@Override public String toString() {
+			return "explicit(" + mX + "," + mY + ")";
+		}
 	}
 	
 	static public class Derived extends Point {
@@ -35,8 +38,10 @@ public abstract class Point {
 			shape0 = s0;
 			shape1 = s1;
 			mStateId = new StateId.NonLeaf(s0.stateId(), s1.stateId());
-			mStateId.maybeUpdateId();
 			mN = 0;
+			ShapeIntersection intersection = Shape.intersection(shape0, shape1);
+			mX = intersection.x(mN);
+			mY = intersection.y(mN);				
 		}
 		
 		private void maybeRefreshState() {
@@ -46,16 +51,21 @@ public abstract class Point {
 				mY = intersection.y(mN);				
 			}
 		}
-		public double x() {
+		@Override public double x() {
 			maybeRefreshState();
 			return mX;
 		}
 		
-		public double y() {
+		@Override public double y() {
 			maybeRefreshState();
 			return mY;
 		}
-		public StateId stateId() { return mStateId; }
+		@Override public StateId stateId() { return mStateId; }
+		
+		@Override public String toString() {
+			return "derived(" + x() + "," + y() + ")";
+		}
+		
 	}
 }
 
