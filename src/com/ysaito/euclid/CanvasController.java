@@ -81,12 +81,12 @@ public class CanvasController {
 	
 	static private class ShapesAndDistance {
 		Shape shape1, shape2;
-		float distance;
+		double distance;
 	}
 	
 	static private class PointAndDistance {
 		Point.Explicit point;
-		float distance;
+		double distance;
 	}
 	
 	private Point pickNearbyPoint(float x, float y) {
@@ -103,13 +103,13 @@ public class CanvasController {
 		return null;
 	}
 	
-	private ShapesAndDistance findNearestShapeIntersection(float x, float y) {
+	private ShapesAndDistance findNearestShapeIntersection(double x, double y) {
 		Vector<Shape> shapes = mModel.shapes();
 		Vector<ShapesAndDistance> nearbyShapes = null;
 		int n = shapes.size();
 		for (int i = 0; i < n; ++i) {
 			Shape shape = shapes.get(i);
-			float d = shape.distanceFrom(x, y);
+			double d = shape.distanceFrom(x, y);
 			if (d < MAX_SNAP_DISTANCE) {
 				if (nearbyShapes == null) nearbyShapes = new Vector<ShapesAndDistance>();
 				ShapesAndDistance sd = new ShapesAndDistance();
@@ -130,7 +130,7 @@ public class CanvasController {
 				Shape s2 = shapes.get(j);
 				ShapeIntersection intersection = Shape.intersection(s1,  s2);
 				if (intersection != null) {
-					float d = intersection.minDistanceFrom(x, y);
+					double d = intersection.minDistanceFrom(x, y);
 					if (d < candidate.distance) {
 						candidate.distance = d;
 						candidate.shape1 = s1;
@@ -149,10 +149,10 @@ public class CanvasController {
 		Vector<Point.Explicit> points = mModel.userDefinedPoints();
 		Point.Explicit candidate = null;
 		final int n = points.size();
-		float minDistance = MAX_SNAP_DISTANCE;
+		double minDistance = MAX_SNAP_DISTANCE;
 		for (int i = 0; i < n; ++i) {
 			Point.Explicit point = points.get(i);
-			float d = Util.distance(point.x(), point.y(), x, y);
+			double d = Util.distance(point.x(), point.y(), x, y);
 			if (d < minDistance) {
 				minDistance = d;
 				candidate = point;

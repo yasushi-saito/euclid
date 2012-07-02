@@ -57,56 +57,56 @@ class CanvasView extends View implements View.OnTouchListener {
 		}
 	}
 
-	private void drawPoint(Canvas canvas, float x, float y) {
+	private void drawPoint(Canvas canvas, double x, double y) {
 		Paint p = new Paint();
 		p.setStyle(Paint.Style.FILL_AND_STROKE);
 		p.setColor(0xff40e838);
-		canvas.drawRect(x - 3, y - 3, x + 3, y + 3, p);
+		canvas.drawRect((float)x - 3, (float)y - 3, (float)x + 3, (float)y + 3, p);
 	}
 	
 	private void drawLine(Canvas canvas, Shape.Line line) {
-		final float dX = line.p1.x() - line.p2.x();
-		final float dY = line.p1.y() - line.p2.y();
+		final double dX = line.p0.x() - line.p1.x();
+		final double dY = line.p0.y() - line.p1.y();
 		if (Math.abs(dX) > Math.abs(dY)) {
 			drawLineH(canvas, line);
 		} else {
 			drawLineV(canvas, line);
 		}
+		drawPoint(canvas, line.p0.x(), line.p0.y());
 		drawPoint(canvas, line.p1.x(), line.p1.y());
-		drawPoint(canvas, line.p2.x(), line.p2.y());
 	}
 	
 	private void drawLineH(Canvas canvas, Shape.Line line) {
 		// Solve equation ax + y = c
-		final float dX = line.p1.x() - line.p2.x();
-		final float dY = line.p1.y() - line.p2.y();
-		final float a = -dY / dX;
-		final float c = a * line.p1.x() + line.p1.y();
-		final float width = getWidth();
+		final double dX = line.p0.x() - line.p1.x();
+		final double dY = line.p0.y() - line.p1.y();
+		final double a = -dY / dX;
+		final double c = a * line.p0.x() + line.p0.y();
+		final double width = getWidth();
 		Paint p = new Paint();
 		p.setStyle(Paint.Style.STROKE);
 		p.setColor(0xff505050);
-		canvas.drawLine(0, c, width, c - a * width, p);
+		canvas.drawLine(0, (float)c, (float)width, (float)(c - a * width), p);
 	}
 
 	private void drawLineV(Canvas canvas, Shape.Line line) {
 		// Solve equation x + ay = c
-		final float dX = line.p1.x() - line.p2.x();
-		final float dY = line.p1.y() - line.p2.y();
-		final float a = -dX / dY;
-		final float c = line.p1.x() + a * line.p1.y();
-		final float height = getHeight();
+		final double dX = line.p0.x() - line.p1.x();
+		final double dY = line.p0.y() - line.p1.y();
+		final double a = -dX / dY;
+		final double c = line.p0.x() + a * line.p0.y();
+		final double height = getHeight();
 		Paint p = new Paint();
 		p.setStyle(Paint.Style.STROKE);
 		p.setColor(0xff505050);
-		canvas.drawLine(c, 0, c - a * height, height, p);
+		canvas.drawLine((float)c, 0, (float)(c - a * height), (float)height, p);
 	}
 	
 	private void drawCircle(Canvas canvas, Shape.Circle circle) {
 		Paint p = new Paint();
 		p.setStyle(Paint.Style.STROKE);
 		p.setColor(0xff505050);
-		canvas.drawCircle(circle.center.x(), circle.center.y(), circle.radius(), p);
+		canvas.drawCircle((float)circle.center.x(), (float)circle.center.y(), (float)circle.radius(), p);
 		drawPoint(canvas, circle.center.x(), circle.center.y());
 	}
 	

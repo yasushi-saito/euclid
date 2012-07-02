@@ -4,88 +4,88 @@ import android.util.Log;
 
 public abstract class Shape {
 	public abstract StateId stateId();
-	public abstract float distanceFrom(float x, float y);
+	public abstract double distanceFrom(double x, double y);
 	
 	static private ShapeIntersection lineCircleIntersection(Line line, Circle circle) {
-		float radius = circle.radius();
-		final float x1 = line.p1.x() - circle.center.x();
-		final float y1 = line.p1.y() - circle.center.y();
-		final float x2 = line.p2.x() - circle.center.x();
-		final float y2 = line.p2.y() - circle.center.y();
-		float dx = x1 - x2;
-		float dy = y2 - y1;
-		float dq = dx * dx + dy * dy;
-		float det = x1 * y2 - x2 * y1;
-		float disc = radius * radius * dq - det * det;
+		final double radius = circle.radius();
+		final double x0 = line.p0.x() - circle.center.x();
+		final double y0 = line.p0.y() - circle.center.y();
+		final double x1 = line.p1.x() - circle.center.x();
+		final double y1 = line.p1.y() - circle.center.y();
+		double dx = x1 - x0;
+		double dy = y1 - y0;
+		double dq = dx * dx + dy * dy;
+		double det = x0 * y1 - x1 * y0;
+		double disc = radius * radius * dq - det * det;
 		if (disc < 0) return null;
 
 		int sign = (dy < 0) ? -1 : 1;
-		float xw = (float)(sign * dx * Math.sqrt(disc));
-		float yw = (float)(Math.abs(dy) * Math.sqrt(disc));
+		double xw = sign * dx * Math.sqrt(disc);
+		double yw = Math.abs(dy) * Math.sqrt(disc);
 		
 		return new ShapeIntersection(
-				circle.center.x() + det * dy + xw, 
-				circle.center.y() + -det * dx + yw,
-				circle.center.x() + det * dy - xw, 
-				circle.center.y() + -det * dx - yw);
+				circle.center.x() + (det * dy + xw) / dq, 
+				circle.center.y() + (-det * dx + yw) / dq,
+				circle.center.x() + (det * dy - xw) / dq, 
+				circle.center.y() + (-det * dx - yw) / dq);
 	}
 	
 	static private ShapeIntersection circleCircleIntersection(Circle c0, Circle c1) {
 		/* Copied from http://local.wasp.uwa.edu.au/~pbourke/geometry/2circle/ */
-		final float x0 = c0.center.x();
-		final float y0 = c0.center.y();
-		final float x1 = c1.center.x();	
-		final float y1 = c1.center.y();	
-		final float radius0 = c0.radius();
-		final float radius1 = c1.radius();
+		final double x0 = c0.center.x();
+		final double y0 = c0.center.y();
+		final double x1 = c1.center.x();	
+		final double y1 = c1.center.y();	
+		final double radius0 = c0.radius();
+		final double radius1 = c1.radius();
 		
-		final float dx = x1 - x0;
-		final float dy = y1 - y0;
+		final double dx = x1 - x0;
+		final double dy = y1 - y0;
 
-		final float d = (float)Math.sqrt((dy*dy) + (dx*dx));
+		final double d = (double)Math.sqrt((dy*dy) + (dx*dx));
 
 		if (d > (radius0 + radius1)) return null;  // no intersection
 		if (d < Math.abs(radius0 - radius1)) return null; // one circle is inside the other
 
 		/* Determine the distance from point 0 to point 2. */
-		float a = ((radius0*radius0) - (radius1*radius1) + (d*d)) / (2 * d) ;
+		double a = ((radius0*radius0) - (radius1*radius1) + (d*d)) / (2 * d) ;
 
 		/* Determine the coordinates of point 2. */
-		float x2 = x0 + (dx * a/d);
-		float y2 = y0 + (dy * a/d);
+		double x2 = x0 + (dx * a/d);
+		double y2 = y0 + (dy * a/d);
 
 		/* Determine the distance from point 2 to either of the
 		 * intersection points.
 		 */
-		float h = (float)Math.sqrt((radius0*radius0) - (a*a));
+		double h = (double)Math.sqrt((radius0*radius0) - (a*a));
 
 		/* Now determine the offsets of the intersection points from
 		 * point 2.
 		 */
-		float rx = -dy * (h/d);
-		float ry = dx * (h/d);
+		double rx = -dy * (h/d);
+		double ry = dx * (h/d);
 
 		/* Determine the absolute intersection points. */
 		return new ShapeIntersection(x2 + rx, y2 + ry, x2 - rx, y2 - ry);
 	}
 	
-	static private ShapeIntersection lineLineIntersection(Line line1, Line line2) {
-		final float x1 = line1.p1.x();
-		final float y1 = line1.p1.y();
-		final float x2 = line1.p2.x();
-		final float y2 = line1.p2.y();
+	static private ShapeIntersection lineLineIntersection(Line lineA, Line lineB) {
+		final double xa0 = lineA.p0.x();
+		final double ya0 = lineA.p0.y();
+		final double xa1 = lineA.p1.x();
+		final double ya1 = lineA.p1.y();
 		
-		final float x3 = line2.p1.x();
-		final float y3 = line2.p1.y();			
-		final float x4 = line2.p2.x();
-		final float y4 = line2.p2.y();			
+		final double xb0 = lineB.p0.x();
+		final double yb0 = lineB.p0.y();			
+		final double xb1 = lineB.p1.x();
+		final double yb1 = lineB.p1.y();			
 		
-		float det = (x1-x2)*(y3-y4) - (y1-y2)*(x3-x4);
+		double det = (xa0-xa1)*(yb0-yb1) - (ya0-ya1)*(xb0-xb1);
 		if (Math.abs(det) < 0.001) {
 			return null;
 		} else {
-			float iX = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / det;
-			float iY = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / det;
+			double iX = ((xa0 * ya1 - ya0 * xa1) * (xb0 - xb1) - (xa0 - xa1) * (xb0 * yb1 - yb0 * xb1)) / det;
+			double iY = ((xa0 * ya1 - ya0 * xa1) * (yb0 - yb1) - (ya0 - ya1) * (xb0 * yb1 - yb0 * xb1)) / det;
 			return new ShapeIntersection(iX, iY);
 		}		
 	}
@@ -109,21 +109,21 @@ public abstract class Shape {
 	}
 	
 	static public class Line extends Shape {
-		public final Point p1, p2;
+		public final Point p0, p1;
 		public StateId mStateId;
 		
 		public Line(Point pp1, Point pp2) {
-			p1 = pp1;
-			p2 = pp2;
-			mStateId = new StateId.NonLeaf(p1.stateId(), p2.stateId());
+			p0 = pp1;
+			p1 = pp2;
+			mStateId = new StateId.NonLeaf(p0.stateId(), p1.stateId());
 		}
 		
 		public StateId stateId() { return mStateId; }
-		public float distanceFrom(float x, float y) {
-			final float x1 = p1.x();
-			final float y1 = p1.y();
-			final float x2 = p2.x();
-			final float y2 = p2.y();
+		public double distanceFrom(double x, double y) {
+			final double x1 = p0.x();
+			final double y1 = p0.y();
+			final double x2 = p1.x();
+			final double y2 = p1.y();
 			return (x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1) / Util.distance(x1, y1, x2, y2);
 		}
 	}
@@ -137,14 +137,14 @@ public abstract class Shape {
 			mStateId = new StateId.NonLeaf(center.stateId(), radiusControl.stateId());
 		}
 		
-		public float radius() {
-			final float dx = center.x() - radiusControl.x();
-			final float dy = center.y() - radiusControl.y();
-			return (float)Math.sqrt(dx * dx + dy * dy);
+		public double radius() {
+			final double dx = center.x() - radiusControl.x();
+			final double dy = center.y() - radiusControl.y();
+			return Math.sqrt(dx * dx + dy * dy);
 		}
 		
 		public StateId stateId() { return mStateId; }
-		public float distanceFrom(float x, float y) {
+		public double distanceFrom(double x, double y) {
 			return Math.abs(Util.distance(center.x(), center.y(), x, y) - radius());
 		}
 	}
