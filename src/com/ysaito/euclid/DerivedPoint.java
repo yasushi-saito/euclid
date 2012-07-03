@@ -3,7 +3,7 @@ package com.ysaito.euclid;
 import android.util.Log;
 
 public class DerivedPoint extends Point {
-	private int mN;
+	private final int mN;
 	public final Shape shape0, shape1;
 	
 	public double mX, mY;
@@ -13,8 +13,18 @@ public class DerivedPoint extends Point {
 	public DerivedPoint(Shape s0, Shape s1, double nearX, double nearY) {
 		shape0 = s0;
 		shape1 = s1;
-		mN = 0;
 		ShapeIntersection intersection = Shape.intersection(shape0, shape1);
+		
+		double minDistance = 99999.0;
+		int candidate = -1;
+		for (int i = 0; i < intersection.size(); ++i) {
+			final double d = Util.distance(intersection.x(i), intersection.y(i), nearX, nearY);
+			if (i == 0 || d < minDistance) {
+				candidate = i;
+				minDistance = d;
+			}
+		}
+		mN = candidate;
 		mX = intersection.x(mN);
 		mY = intersection.y(mN);
 		mNumPendingTxns = 0;
@@ -23,8 +33,7 @@ public class DerivedPoint extends Point {
 	private static String TAG = "DerivedPoint";
 	
 	@Override public boolean prepareLocationUpdate() {
-		mNumPendingTxns++;
-		if (mNumPendingTxns == 1) {
+		if (mNumPendingTxns++ == 0) {
 			ShapeIntersection intersection = Shape.intersection(shape0, shape1);
 			if (intersection == null) return false;
 			mTempX = intersection.x(mN);
@@ -39,9 +48,10 @@ public class DerivedPoint extends Point {
 
 	@Override public void commitLocationUpdate() {
 		Util.assertTrue(mNumPendingTxns > 0);
-		mX = mTempX;
-		mY = mTempY;
-		--mNumPendingTxns;
+		if (--mNumPendingTxns == 0) {
+			mX = mTempX;
+			mY = mTempY;
+		}
 	}
 	
 	@Override public void abortLocationUpdate() {

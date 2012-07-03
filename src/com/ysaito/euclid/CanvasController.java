@@ -15,7 +15,7 @@ public class CanvasController {
 	int mMode;
 
 	static private class PointAndDistance {
-		ExplicitPoint point;
+		Point point;
 		Shape shape0, shape1;
 		double distance;
 		
@@ -43,10 +43,7 @@ public class CanvasController {
 			if (mStartPoint != null) {
 				mCurrentPoint = mStartPoint.clone();
 			}
-		} else if (mMode == DRAW_LINE) {
-			mStartPoint = pickNearbyPoint(x, y);
-			mCurrentPoint = mStartPoint.clone();
-		} else if (mMode == DRAW_CIRCLE) {
+		} else if (mMode == DRAW_LINE || mMode == DRAW_CIRCLE) {
 			mStartPoint = pickNearbyPoint(x, y);
 			mCurrentPoint = mStartPoint.clone();
 		}
@@ -63,7 +60,8 @@ public class CanvasController {
 				p0 = mStartPoint.point;
 				mModel.addShape(mStartPoint.point);  // TODO: remove dup
 			} else {
-				p0 = new DerivedPoint(mStartPoint.shape0, mStartPoint.shape1, x, y);
+				// p0 = new DerivedPoint(mStartPoint.shape0, mStartPoint.shape1, x, y);
+				p0 = mStartPoint.point;
 				mStartPoint.shape0.addDependency(p0);
 				mStartPoint.shape1.addDependency(p0);				
 			}
@@ -72,11 +70,10 @@ public class CanvasController {
 				p1 = mCurrentPoint.point;
 				mModel.addShape(mCurrentPoint.point);
 			} else {
-				p1 = new DerivedPoint(mCurrentPoint.shape0, mCurrentPoint.shape1, x, y);
+				p1 = mCurrentPoint.point;				
+				// p1 = new DerivedPoint(mCurrentPoint.shape0, mCurrentPoint.shape1, x, y);
 			}
-			Shape shape;
-			if (mMode == DRAW_LINE) shape = new Line(p0, p1);
-			else shape = new Circle(p0, p1);
+			Shape shape = (mMode == DRAW_LINE) ? new Line(p0, p1) : new Circle(p0, p1);
 			
 			mModel.addShape(shape);
 			if (p0 instanceof ExplicitPoint) {
@@ -102,7 +99,7 @@ public class CanvasController {
 	public void onTouchMove(float x, float y) {
 		if (mCurrentPoint == null) return;
 		if (mMode == MOVE) {
-			mCurrentPoint.point.setTempLocation(x, y);
+			((ExplicitPoint)mCurrentPoint.point).setTempLocation(x, y);
 			if (mCurrentPoint.point.dependencies() != null) {
 				LinkedList<Shape> queue = new LinkedList<Shape>();
 				addDepsTo(mCurrentPoint.point, queue); 
@@ -150,7 +147,7 @@ public class CanvasController {
 		mView.redraw();
 	}
 	
-	static final float MAX_SNAP_DISTANCE = 20;
+	static final float MAX_SNAP_DISTANCE = 40;
 
 	private PointAndDistance pickNearbyPoint(float x, float y) {
 		PointAndDistance nearestUserDefinedPoint = findNearestUserDefinedPoint(x, y);
@@ -171,18 +168,15 @@ public class CanvasController {
 	private final String TAG = "CanvasController";
 
 	private PointAndDistance findNearestIntersection(double x, double y) {
-		Vector<Shape> shapes = mModel.shapes();
-		Vector<PointAndDistance> nearbyShapes = null;
-		int n = shapes.size();
+		Vector<Shape> allShapes = mModel.shapes();
+		Vector<Shape> nearbyShapes = null;
+		int n = allShapes.size();
 		for (int i = 0; i < n; ++i) {
-			Shape shape = shapes.get(i);
+			Shape shape = allShapes.get(i);
 			double d = shape.distanceFrom(x, y);
 			if (d < MAX_SNAP_DISTANCE) {
-				if (nearbyShapes == null) nearbyShapes = new Vector<PointAndDistance>();
-				PointAndDistance pd = new PointAndDistance();
-				pd.shape0 = shape; // point and shape1 are unused
-				pd.distance = d;
-				nearbyShapes.add(pd);
+				if (nearbyShapes == null) nearbyShapes = new Vector<Shape>();
+				nearbyShapes.add(shape);
 			}
 		}
 		if (nearbyShapes == null) return null;
@@ -192,18 +186,18 @@ public class CanvasController {
 		candidate.distance = MAX_SNAP_DISTANCE;
 
 		for (int i = 0; i < n; ++i) {
-			PointAndDistance pd1 = nearbyShapes.get(i);
+			Shape shape0 = nearbyShapes.get(i);
 			for (int j = i + 1; j < n; ++j) {
-				PointAndDistance pd2 = nearbyShapes.get(j);
-				ShapeIntersection intersection = Shape.intersection(pd1.shape0,  pd2.shape0);
+				Shape shape1 = nearbyShapes.get(j);
+				ShapeIntersection intersection = Shape.intersection(shape0, shape1);
 				if (intersection != null) {
 					double d = intersection.minDistanceFrom(x, y);
 					// Log.d(TAG, "Intersection: " + sd1.shape1.toString() + "," + sd2.shape1.toString() + ": " + intersection.toString() + " distance=" + d);
 					if (d < candidate.distance) {
 						candidate.distance = d;
-						candidate.shape0 = pd1.shape0;
-						candidate.shape1 = pd2.shape0;
-						candidate.point = new ExplicitPoint(intersection.x(0), intersection.y(0));
+						candidate.shape0 = shape0;
+						candidate.shape1 = shape1;
+						candidate.point = new DerivedPoint(shape0, shape1, x, y);
 					}
 				}
 			}

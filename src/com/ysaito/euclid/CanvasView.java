@@ -61,13 +61,6 @@ class CanvasView extends View implements View.OnTouchListener {
 		}
 	}
 
-	private void drawPoint(Canvas canvas, double x, double y) {
-		Paint p = new Paint();
-		p.setStyle(Paint.Style.FILL_AND_STROKE);
-		p.setColor(0xff40e838);
-		canvas.drawRect((float)x - 3, (float)y - 3, (float)x + 3, (float)y + 3, p);
-	}
-	
 	private void drawPoint(Canvas canvas, Point point) {
 		Paint p = new Paint();
 		p.setStyle(Paint.Style.FILL_AND_STROKE);
@@ -78,8 +71,7 @@ class CanvasView extends View implements View.OnTouchListener {
 		}
 		float x = (float)point.x();
 		float y = (float)point.y();
-		canvas.drawRect((float)x - 3, (float)y - 3, (float)x + 3, (float)y + 3, p);
-		
+		canvas.drawCircle((float)x, (float)y, 10, p);
 	}
 	
 	private void drawLine(Canvas canvas, Line line) {
@@ -126,6 +118,7 @@ class CanvasView extends View implements View.OnTouchListener {
 		p.setColor(0xff505050);
 		canvas.drawCircle((float)circle.center.x(), (float)circle.center.y(), (float)circle.radius(), p);
 		drawPoint(canvas, circle.center);
+		drawPoint(canvas, circle.radiusControl);		
 	}
 	
 	CanvasController mController;
