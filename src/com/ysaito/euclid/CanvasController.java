@@ -1,5 +1,6 @@
 package com.ysaito.euclid;
 
+import java.util.LinkedList;
 import java.util.Vector;
 
 import android.util.Log;
@@ -7,15 +8,15 @@ import android.util.Log;
 public class CanvasController {
 	final CanvasModel mModel;
 	final CanvasView mView;
-	
+
 	static final int MOVE = 1;
 	static final int DRAW_LINE = 2;
 	static final int DRAW_CIRCLE = 3;
 	int mMode;
-	
-	Point.Explicit mCurrentPoint;
-	Point mLineAnchor;
-	Point mCircleAnchor;
+
+	PointAndDistance mStartPoint;
+	ExplicitPoint mCurrentPoint;
+	Shape mStartPointDep0, mStartPointDep1;
 	
 	public CanvasController(CanvasModel model, CanvasView view) {
 		mModel = model;
@@ -24,147 +25,203 @@ public class CanvasController {
 	}
 	public void onTouchStart(float x, float y) {
 		if (mMode == MOVE) {
-			PointAndDistance pd = findNearestUserDefinedPoint(x, y);
-			if (pd != null) {
-				mCurrentPoint = pd.point;
+			mStartPoint = findNearestUserDefinedPoint(x, y);
+			if (mStartPoint != null) {
+				mCurrentPoint = mStartPoint.point;
 			}
 		} else if (mMode == DRAW_LINE) {
-			mLineAnchor = pickNearbyPoint(x, y);
-			if (mLineAnchor == null) {
-				mLineAnchor = new Point.Explicit(x,  y);
+			mStartPoint = pickNearbyPoint(x, y);
+			if (mStartPoint == null) {
+				mStartPoint = new PointAndDistance();
+				mStartPoint.point = new ExplicitPoint(x,  y);
 			}
-			mCurrentPoint = new Point.Explicit(x,  y);
+			mCurrentPoint = new ExplicitPoint(x,  y);
 		} else if (mMode == DRAW_CIRCLE) {
-			mCircleAnchor = pickNearbyPoint(x, y);
-			if (mCircleAnchor == null) {
-				mCircleAnchor = new Point.Explicit(x,  y);
+			mStartPoint = pickNearbyPoint(x, y);
+			if (mStartPoint == null) {
+				mStartPoint = new PointAndDistance();
+				mStartPoint.point = new ExplicitPoint(x,  y);
 			}
-			mCurrentPoint = new Point.Explicit(x,  y);
+			mCurrentPoint = new ExplicitPoint(x,  y);
 		}
 		onTouchMove(x, y);
 	}
 	public void onTouchEnd(float x, float y) {
+		if (mStartPoint == null) return;
+		
 		onTouchMove(x, y);
-		if (mLineAnchor != null) {
-			if (mLineAnchor instanceof Point.Explicit){
-				mModel.addUserDefinedPoint((Point.Explicit)mLineAnchor);
+		if (mMode == DRAW_LINE) {
+			mModel.addShape(mCurrentPoint);
+			Point p0;
+			if (mStartPoint.shape0 == null) {
+				p0 = mStartPoint.point;
+				mModel.addShape(mStartPoint.point);  // TODO: remove dup
+			} else {
+				p0 = new DerivedPoint(mStartPoint.shape0, mStartPoint.shape1, x, y);
+				mStartPoint.shape0.addDependency(p0);
+				mStartPoint.shape1.addDependency(p0);				
 			}
-			mModel.addUserDefinedPoint(mCurrentPoint);
-			mModel.addShape(new Shape.Line(mLineAnchor, mCurrentPoint));
-		} else if (mCircleAnchor != null) {
-			if (mCircleAnchor instanceof Point.Explicit){
-				mModel.addUserDefinedPoint((Point.Explicit)mCircleAnchor);
+			Line line = new Line(p0, mCurrentPoint); 
+			mModel.addShape(line);
+			if (p0 instanceof ExplicitPoint) {
+				p0.addDependency(line);
 			}
-			mModel.addUserDefinedPoint(mCurrentPoint);
-			mModel.addShape(new Shape.Circle(mCircleAnchor, mCurrentPoint));
+			mCurrentPoint.addDependency(line);
+		} else if (mMode == DRAW_CIRCLE) {
+			Point p0;
+			if (mStartPoint.shape0 == null) {
+				p0 = mStartPoint.point;
+				mModel.addShape(p0);
+			} else {
+				p0 = new DerivedPoint(mStartPoint.shape0, mStartPoint.shape1, x, y);
+				mStartPoint.shape0.addDependency(p0);
+				mStartPoint.shape1.addDependency(p0);				
+			}
+			mModel.addShape(mCurrentPoint);
+			Circle circle = new Circle(p0, mCurrentPoint);
+			mModel.addShape(circle);
+			if (p0 instanceof ExplicitPoint) {
+				p0.addDependency(circle);
+			}
+			mCurrentPoint.addDependency(circle);
 		}
+		mStartPoint = null;
 		mCurrentPoint = null;
-		mLineAnchor = null;
-		mCircleAnchor = null;
 		mModel.setTempShape(null);
 	}
+	
+	static private void addDepsTo(Shape shape, LinkedList<Shape> deps) {
+		Vector<Shape> d = shape.dependencies();
+		if (d != null) {
+			for (int i = 0; i < d.size(); ++i) {
+				deps.addLast(d.get(i));
+			}
+		}
+	}
+	
 	public void onTouchMove(float x, float y) {
 		if (mCurrentPoint != null) {
-			mCurrentPoint.moveTo(x, y);
-			if (mLineAnchor != null) {
-				mModel.setTempShape(new Shape.Line(mLineAnchor, mCurrentPoint));
-			} else if (mCircleAnchor != null) {
-				mModel.setTempShape(new Shape.Circle(mCircleAnchor, mCurrentPoint));
+			mCurrentPoint.setTempLocation(x, y);
+			if (mCurrentPoint.dependencies() != null) {
+				LinkedList<Shape> queue = new LinkedList<Shape>();
+				addDepsTo(mCurrentPoint, queue); 
+				boolean ok = true;
+				while (queue.size() > 0) {
+					Shape shape = queue.getFirst();
+					queue.removeFirst();
+					if (!shape.prepareLocationUpdate()) {
+						ok = false;
+					}
+					addDepsTo(shape, queue);
+				}
+
+				queue.addFirst(mCurrentPoint);
+				while (queue.size() > 0) {
+					Shape shape = queue.getFirst();
+					queue.removeFirst();
+					if (ok) {
+						shape.commitLocationUpdate();
+					} else {
+						shape.abortLocationUpdate();
+					}
+					addDepsTo(shape, queue);
+				}
+			} else {
+				mCurrentPoint.commitLocationUpdate();
+			}
+			if (mMode == DRAW_LINE) {
+				mModel.setTempShape(new Line(mStartPoint.point, mCurrentPoint));
+			} else if (mMode == DRAW_CIRCLE) {
+				mModel.setTempShape(new Circle(mStartPoint.point, mCurrentPoint));
 			}
 		}
 		mView.redraw();
 	}
-	
+
 	public void onModeChange(int mode) {
 		mMode = mode;
 	}
 
 	static final float MAX_SNAP_DISTANCE = 20;
-	
-	static private class ShapesAndDistance {
-		Shape shape1, shape2;
-		double distance;
-	}
-	
+
 	static private class PointAndDistance {
-		Point.Explicit point;
+		ExplicitPoint point;
+		Shape shape0, shape1;
 		double distance;
 	}
-	
-	private Point pickNearbyPoint(float x, float y) {
-		PointAndDistance nearestPoint = findNearestUserDefinedPoint(x, y);
-		ShapesAndDistance nearestShapes = findNearestShapeIntersection(x, y);
-		if (nearestPoint != null) {
-			if (nearestShapes == null || nearestPoint.distance <= nearestShapes.distance) {
-				return nearestPoint.point;
+
+	private PointAndDistance pickNearbyPoint(float x, float y) {
+		PointAndDistance nearestUserDefinedPoint = findNearestUserDefinedPoint(x, y);
+		PointAndDistance nearestIntersection = findNearestIntersection(x, y);
+		if (nearestUserDefinedPoint != null) {
+			if (nearestIntersection == null || nearestUserDefinedPoint.distance <= nearestIntersection.distance) {
+				return nearestUserDefinedPoint;
 			}
 		}
-		if (nearestShapes != null) {
-			return new Point.Derived(nearestShapes.shape1, nearestShapes.shape2, x, y);
-		}
-		return null;
+		return nearestIntersection;
 	}
-	
+
 	private final String TAG = "CanvasController";
-	
-	private ShapesAndDistance findNearestShapeIntersection(double x, double y) {
+
+	private PointAndDistance findNearestIntersection(double x, double y) {
 		Vector<Shape> shapes = mModel.shapes();
-		Vector<ShapesAndDistance> nearbyShapes = null;
+		Vector<PointAndDistance> nearbyShapes = null;
 		int n = shapes.size();
 		for (int i = 0; i < n; ++i) {
 			Shape shape = shapes.get(i);
 			double d = shape.distanceFrom(x, y);
 			if (d < MAX_SNAP_DISTANCE) {
-				if (nearbyShapes == null) nearbyShapes = new Vector<ShapesAndDistance>();
-				ShapesAndDistance sd = new ShapesAndDistance();
-				sd.shape1 = shape; // shape2 is unused
-				sd.distance = d;
-				nearbyShapes.add(sd);
-				Log.d(TAG, "Add: " + shape.toString() + " distance=" + d);
+				if (nearbyShapes == null) nearbyShapes = new Vector<PointAndDistance>();
+				PointAndDistance pd = new PointAndDistance();
+				pd.shape0 = shape; // point and shape1 are unused
+				pd.distance = d;
+				nearbyShapes.add(pd);
 			}
 		}
 		if (nearbyShapes == null) return null;
 		n = nearbyShapes.size();
-		
-		ShapesAndDistance candidate = new ShapesAndDistance();
+
+		PointAndDistance candidate = new PointAndDistance();
 		candidate.distance = MAX_SNAP_DISTANCE;
-		
+
 		for (int i = 0; i < n; ++i) {
-			ShapesAndDistance sd1 = nearbyShapes.get(i);
+			PointAndDistance pd1 = nearbyShapes.get(i);
 			for (int j = i + 1; j < n; ++j) {
-				ShapesAndDistance sd2 = nearbyShapes.get(j);
-				ShapeIntersection intersection = Shape.intersection(sd1.shape1,  sd2.shape1);
-				if (intersection == null) {
-					// Log.d(TAG, "Intersection: " + sd1.shape1.toString() + "," + sd2.shape1.toString() + ": null");
-				}
+				PointAndDistance pd2 = nearbyShapes.get(j);
+				ShapeIntersection intersection = Shape.intersection(pd1.shape0,  pd2.shape0);
 				if (intersection != null) {
 					double d = intersection.minDistanceFrom(x, y);
 					// Log.d(TAG, "Intersection: " + sd1.shape1.toString() + "," + sd2.shape1.toString() + ": " + intersection.toString() + " distance=" + d);
 					if (d < candidate.distance) {
 						candidate.distance = d;
-						candidate.shape1 = sd1.shape1;
-						candidate.shape2 = sd2.shape1;
+						candidate.shape0 = pd1.shape0;
+						candidate.shape1 = pd2.shape0;
+						candidate.point = new ExplicitPoint(intersection.x(0), intersection.y(0));
 					}
 				}
 			}
 		}
-		if (candidate.shape1 != null) {
+		if (candidate.shape0 != null) {
 			return candidate;
 		}
 		return null;
 	}
 
 	private PointAndDistance findNearestUserDefinedPoint(float x, float y) {
-		Vector<Point.Explicit> points = mModel.userDefinedPoints();
-		Point.Explicit candidate = null;
-		final int n = points.size();
+		Vector<Shape> shapes = mModel.shapes();
+		ExplicitPoint candidate = null;
+		final int n = shapes.size();
 		double minDistance = MAX_SNAP_DISTANCE;
+		
 		for (int i = 0; i < n; ++i) {
-			Point.Explicit point = points.get(i);
-			double d = Util.distance(point.x(), point.y(), x, y);
-			if (d < minDistance) {
-				minDistance = d;
-				candidate = point;
+			Shape shape = shapes.get(i);
+			if (shape instanceof ExplicitPoint) {
+				ExplicitPoint point = (ExplicitPoint)shape;
+				double d = Util.distance(point.x(), point.y(), x, y);
+				if (d < minDistance) {
+					minDistance = d;
+					candidate = point;
+				}
 			}
 		}
 		if (candidate != null) {

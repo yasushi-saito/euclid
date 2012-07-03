@@ -47,12 +47,16 @@ class CanvasView extends View implements View.OnTouchListener {
 	}
 
 	private void drawShape(Canvas canvas, Shape shape) {
-		if (shape instanceof Shape.Circle) {
-			drawCircle(canvas, (Shape.Circle)shape);
+		if (shape instanceof Circle) {
+			drawCircle(canvas, (Circle)shape);
 			return;
 		}
-		if (shape instanceof Shape.Line) {
-			drawLine(canvas, (Shape.Line)shape); 
+		if (shape instanceof Line) {
+			drawLine(canvas, (Line)shape); 
+			return;
+		}
+		if (shape instanceof Point) {
+			// do nothing.
 			return;
 		}
 	}
@@ -64,7 +68,21 @@ class CanvasView extends View implements View.OnTouchListener {
 		canvas.drawRect((float)x - 3, (float)y - 3, (float)x + 3, (float)y + 3, p);
 	}
 	
-	private void drawLine(Canvas canvas, Shape.Line line) {
+	private void drawPoint(Canvas canvas, Point point) {
+		Paint p = new Paint();
+		p.setStyle(Paint.Style.FILL_AND_STROKE);
+		if (point instanceof ExplicitPoint) { 
+			p.setColor(0xff40e838);
+		} else {
+			p.setColor(0xff50c0c0);
+		}
+		float x = (float)point.x();
+		float y = (float)point.y();
+		canvas.drawRect((float)x - 3, (float)y - 3, (float)x + 3, (float)y + 3, p);
+		
+	}
+	
+	private void drawLine(Canvas canvas, Line line) {
 		final double dX = line.p0.x() - line.p1.x();
 		final double dY = line.p0.y() - line.p1.y();
 		if (Math.abs(dX) > Math.abs(dY)) {
@@ -72,11 +90,11 @@ class CanvasView extends View implements View.OnTouchListener {
 		} else {
 			drawLineV(canvas, line);
 		}
-		drawPoint(canvas, line.p0.x(), line.p0.y());
-		drawPoint(canvas, line.p1.x(), line.p1.y());
+		drawPoint(canvas, line.p0);
+		drawPoint(canvas, line.p1);
 	}
 	
-	private void drawLineH(Canvas canvas, Shape.Line line) {
+	private void drawLineH(Canvas canvas, Line line) {
 		// Solve equation ax + y = c
 		final double dX = line.p0.x() - line.p1.x();
 		final double dY = line.p0.y() - line.p1.y();
@@ -89,7 +107,7 @@ class CanvasView extends View implements View.OnTouchListener {
 		canvas.drawLine(0, (float)c, (float)width, (float)(c - a * width), p);
 	}
 
-	private void drawLineV(Canvas canvas, Shape.Line line) {
+	private void drawLineV(Canvas canvas, Line line) {
 		// Solve equation x + ay = c
 		final double dX = line.p0.x() - line.p1.x();
 		final double dY = line.p0.y() - line.p1.y();
@@ -102,12 +120,12 @@ class CanvasView extends View implements View.OnTouchListener {
 		canvas.drawLine((float)c, 0, (float)(c - a * height), (float)height, p);
 	}
 	
-	private void drawCircle(Canvas canvas, Shape.Circle circle) {
+	private void drawCircle(Canvas canvas, Circle circle) {
 		Paint p = new Paint();
 		p.setStyle(Paint.Style.STROKE);
 		p.setColor(0xff505050);
 		canvas.drawCircle((float)circle.center.x(), (float)circle.center.y(), (float)circle.radius(), p);
-		drawPoint(canvas, circle.center.x(), circle.center.y());
+		drawPoint(canvas, circle.center);
 	}
 	
 	CanvasController mController;

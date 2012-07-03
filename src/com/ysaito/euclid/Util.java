@@ -7,4 +7,11 @@ public class Util {
 		final double dy = y0 - y1;
 		return (double)Math.sqrt(dx * dx + dy * dy);
 	}
+	
+	static Integer nullint;
+	public static void assertTrue(boolean value) {
+		if (!value) {
+			nullint += 10;  // will crash the process
+		}
+	}
 }

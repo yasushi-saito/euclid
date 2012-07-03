@@ -16,32 +16,32 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mModel = new CanvasModel();
-        
-        Point.Explicit p0 = new Point.Explicit(100, 100);
-        mModel.addUserDefinedPoint(p0);
-        Point.Explicit p1 = new Point.Explicit(110, 110);
-        mModel.addUserDefinedPoint(p1);
-        mModel.addShape(new Shape.Circle(p0, p1));
 
-        Point.Explicit p2 = new Point.Explicit(50, 50);
-        mModel.addUserDefinedPoint(p2);
-        mModel.addShape(new Shape.Line(p0, p2));
-        
-        Point.Explicit p3 = new Point.Explicit(80, 80);
-        mModel.addUserDefinedPoint(p3);
-        mModel.addShape(new Shape.Line(p1, p3)); 
+        ExplicitPoint p0 = new ExplicitPoint(100, 100);
+        mModel.addShape(p0);
+        ExplicitPoint p1 = new ExplicitPoint(110, 110);
+        mModel.addShape(p1);
+        mModel.addShape(new Circle(p0, p1));
+
+        ExplicitPoint p2 = new ExplicitPoint(50, 50);
+        mModel.addShape(p2);
+        mModel.addShape(new Line(p0, p2));
+
+        ExplicitPoint p3 = new ExplicitPoint(80, 80);
+        mModel.addShape(p3);
+        mModel.addShape(new Line(p1, p3));
         CanvasView canvasView = (CanvasView)findViewById(R.id.canvasview);
-        
+
         initializeModeButton(R.id.button_move, CanvasController.MOVE);
-        initializeModeButton(R.id.button_line, CanvasController.DRAW_LINE);        
+        initializeModeButton(R.id.button_line, CanvasController.DRAW_LINE);
         initializeModeButton(R.id.button_circle, CanvasController.DRAW_CIRCLE);
-        
+
         mController = new CanvasController(mModel, canvasView);
         canvasView.initialize(mController, mModel);
     }
 
     static final String TAG = "EuclidMain";
-    
+
     class ModeButtonListener implements View.OnClickListener {
     	private final int mMode;
     	public ModeButtonListener(int mode) { mMode = mode; }
@@ -58,7 +58,7 @@ public class MainActivity extends Activity {
         getMenuInflater().inflate(R.menu.activity_main, menu);
         return true;
     }
-    
+
     CanvasController mController;
     CanvasModel mModel;
 }

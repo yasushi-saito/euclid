@@ -1,11 +1,33 @@
 package com.ysaito.euclid;
 
+import java.util.Vector;
+
 import android.util.Log;
 
 public abstract class Shape {
 	// public abstract StateId stateId();
 	public abstract double distanceFrom(double x, double y);
-	public abstract double addDependency(Shape child);
+	public abstract boolean prepareLocationUpdate();
+	public abstract void commitLocationUpdate();
+	public abstract void abortLocationUpdate();
+	
+	private Vector<Shape> mDeps;
+	public Shape() {
+		mDeps = null;
+	}
+	
+	public final void addDependency(Shape child) {
+		if (mDeps == null) mDeps = new Vector<Shape>();
+		mDeps.add(child);
+	}
+	
+	static Vector<Shape> emptyDeps;
+	public final Vector<Shape> dependencies() {
+		if (mDeps != null) return mDeps;
+		if (emptyDeps == null) emptyDeps = new Vector<Shape>();
+		return emptyDeps;
+	}
+	
 	
 	static private ShapeIntersection lineCircleIntersection(Line line, Circle circle) {
 		final double radius = circle.radius();
@@ -107,53 +129,5 @@ public abstract class Shape {
 		}
 		Log.wtf("Blah",  "Blah4");
 		return null;
-	}
-	
-	static public class Line extends Shape {
-		public final Point p0, p1;
-		public StateId mStateId;
-		public Vector<Shape> mDeps;
-		
-		public Line(Point pp1, Point pp2) {
-			p0 = pp1;
-			p1 = pp2;
-			mStateId = new StateId.NonLeaf(p0.stateId(), p1.stateId());
-		}
-		
-		public StateId stateId() { return mStateId; }
-		@Override public double distanceFrom(double x, double y) {
-			final double x0 = p0.x();
-			final double y0 = p0.y();
-			final double x1 = p1.x();
-			final double y1 = p1.y();
-			return Math.abs(((x1 - x0) * (y0 - y) - (x0 - x) * (y1 - y0)) / Util.distance(x0, y0, x1, y1));
-		}
-		@Override public String toString() {
-			return "Point " + p0.toString() + "-" + p1.toString();
-		}
-	}
-	
-	static public class Circle extends Shape {
-		public Point center, radiusControl;
-		public StateId mStateId;
-		public Circle(Point pCenter, Point pRadius) {
-			center = pCenter;
-			radiusControl = pRadius;
-			mStateId = new StateId.NonLeaf(center.stateId(), radiusControl.stateId());
-		}
-		
-		public double radius() {
-			final double dx = center.x() - radiusControl.x();
-			final double dy = center.y() - radiusControl.y();
-			return Math.sqrt(dx * dx + dy * dy);
-		}
-		
-		public StateId stateId() { return mStateId; }
-		public double distanceFrom(double x, double y) {
-			return Math.abs(Util.distance(center.x(), center.y(), x, y) - radius());
-		}
-		@Override public String toString() {
-			return "Circle center=" + center.toString() + " radius=" + radiusControl.toString();
-		}
 	}
 }
