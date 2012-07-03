@@ -16,20 +16,6 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mModel = new CanvasModel();
-
-        ExplicitPoint p0 = new ExplicitPoint(100, 100);
-        mModel.addShape(p0);
-        ExplicitPoint p1 = new ExplicitPoint(110, 110);
-        mModel.addShape(p1);
-        mModel.addShape(new Circle(p0, p1));
-
-        ExplicitPoint p2 = new ExplicitPoint(50, 50);
-        mModel.addShape(p2);
-        mModel.addShape(new Line(p0, p2));
-
-        ExplicitPoint p3 = new ExplicitPoint(80, 80);
-        mModel.addShape(p3);
-        mModel.addShape(new Line(p1, p3));
         CanvasView canvasView = (CanvasView)findViewById(R.id.canvasview);
 
         initializeModeButton(R.id.button_move, CanvasController.MOVE);
@@ -38,6 +24,12 @@ public class MainActivity extends Activity {
 
         mController = new CanvasController(mModel, canvasView);
         canvasView.initialize(mController, mModel);
+    	Button button = (Button)findViewById(R.id.button_reset);
+    	button.setOnClickListener(new View.OnClickListener() {
+    		public void onClick(View v) {
+    			mController.onReset();
+    		}
+    	});
     }
 
     static final String TAG = "EuclidMain";

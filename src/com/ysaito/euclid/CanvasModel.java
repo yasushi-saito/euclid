@@ -19,6 +19,11 @@ public class CanvasModel {
 		mTempShape = s;
 	}
 	
+	public void clear() {
+		mShapes.clear();
+		mTempShape = null;
+	}
+	
 	Vector<Shape> shapes() { return mShapes; }
 	Shape tempShape() { return mTempShape; }
 	

@@ -29,7 +29,6 @@ public class DerivedPoint extends Point {
 			if (intersection == null) return false;
 			mTempX = intersection.x(mN);
 			mTempY = intersection.y(mN);				
-			Log.d(TAG, "Prep:");
 			return true;
 		} else {
 			// If the previous invocation returned false, the whole txn will abort anyway.

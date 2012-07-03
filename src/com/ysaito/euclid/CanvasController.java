@@ -14,9 +14,23 @@ public class CanvasController {
 	static final int DRAW_CIRCLE = 3;
 	int mMode;
 
+	static private class PointAndDistance {
+		ExplicitPoint point;
+		Shape shape0, shape1;
+		double distance;
+		
+		public PointAndDistance clone() {
+			PointAndDistance p = new PointAndDistance();
+			p.point = point;
+			p.shape0 = shape0;
+			p.shape1 = shape1;
+			p.distance = distance;
+			return p;
+		}
+	}
+
 	PointAndDistance mStartPoint;
-	ExplicitPoint mCurrentPoint;
-	Shape mStartPointDep0, mStartPointDep1;
+	PointAndDistance mCurrentPoint;
 	
 	public CanvasController(CanvasModel model, CanvasView view) {
 		mModel = model;
@@ -27,22 +41,14 @@ public class CanvasController {
 		if (mMode == MOVE) {
 			mStartPoint = findNearestUserDefinedPoint(x, y);
 			if (mStartPoint != null) {
-				mCurrentPoint = mStartPoint.point;
+				mCurrentPoint = mStartPoint.clone();
 			}
 		} else if (mMode == DRAW_LINE) {
 			mStartPoint = pickNearbyPoint(x, y);
-			if (mStartPoint == null) {
-				mStartPoint = new PointAndDistance();
-				mStartPoint.point = new ExplicitPoint(x,  y);
-			}
-			mCurrentPoint = new ExplicitPoint(x,  y);
+			mCurrentPoint = mStartPoint.clone();
 		} else if (mMode == DRAW_CIRCLE) {
 			mStartPoint = pickNearbyPoint(x, y);
-			if (mStartPoint == null) {
-				mStartPoint = new PointAndDistance();
-				mStartPoint.point = new ExplicitPoint(x,  y);
-			}
-			mCurrentPoint = new ExplicitPoint(x,  y);
+			mCurrentPoint = mStartPoint.clone();
 		}
 		onTouchMove(x, y);
 	}
@@ -50,8 +56,8 @@ public class CanvasController {
 		if (mStartPoint == null) return;
 		
 		onTouchMove(x, y);
-		if (mMode == DRAW_LINE) {
-			mModel.addShape(mCurrentPoint);
+		if (mMode == DRAW_LINE || mMode == DRAW_CIRCLE) {
+			mModel.addShape(mCurrentPoint.point);
 			Point p0;
 			if (mStartPoint.shape0 == null) {
 				p0 = mStartPoint.point;
@@ -61,29 +67,24 @@ public class CanvasController {
 				mStartPoint.shape0.addDependency(p0);
 				mStartPoint.shape1.addDependency(p0);				
 			}
-			Line line = new Line(p0, mCurrentPoint); 
-			mModel.addShape(line);
-			if (p0 instanceof ExplicitPoint) {
-				p0.addDependency(line);
-			}
-			mCurrentPoint.addDependency(line);
-		} else if (mMode == DRAW_CIRCLE) {
-			Point p0;
-			if (mStartPoint.shape0 == null) {
-				p0 = mStartPoint.point;
-				mModel.addShape(p0);
+			Point p1;
+			if (mCurrentPoint.shape0 == null) {
+				p1 = mCurrentPoint.point;
+				mModel.addShape(mCurrentPoint.point);
 			} else {
-				p0 = new DerivedPoint(mStartPoint.shape0, mStartPoint.shape1, x, y);
-				mStartPoint.shape0.addDependency(p0);
-				mStartPoint.shape1.addDependency(p0);				
+				p1 = new DerivedPoint(mCurrentPoint.shape0, mCurrentPoint.shape1, x, y);
 			}
-			mModel.addShape(mCurrentPoint);
-			Circle circle = new Circle(p0, mCurrentPoint);
-			mModel.addShape(circle);
+			Shape shape;
+			if (mMode == DRAW_LINE) shape = new Line(p0, p1);
+			else shape = new Circle(p0, p1);
+			
+			mModel.addShape(shape);
 			if (p0 instanceof ExplicitPoint) {
-				p0.addDependency(circle);
+				p0.addDependency(shape);
 			}
-			mCurrentPoint.addDependency(circle);
+			if (p1 instanceof ExplicitPoint) {
+				p1.addDependency(shape);
+			}
 		}
 		mStartPoint = null;
 		mCurrentPoint = null;
@@ -98,13 +99,13 @@ public class CanvasController {
 			}
 		}
 	}
-	
 	public void onTouchMove(float x, float y) {
-		if (mCurrentPoint != null) {
-			mCurrentPoint.setTempLocation(x, y);
-			if (mCurrentPoint.dependencies() != null) {
+		if (mCurrentPoint == null) return;
+		if (mMode == MOVE) {
+			mCurrentPoint.point.setTempLocation(x, y);
+			if (mCurrentPoint.point.dependencies() != null) {
 				LinkedList<Shape> queue = new LinkedList<Shape>();
-				addDepsTo(mCurrentPoint, queue); 
+				addDepsTo(mCurrentPoint.point, queue); 
 				boolean ok = true;
 				while (queue.size() > 0) {
 					Shape shape = queue.getFirst();
@@ -115,7 +116,7 @@ public class CanvasController {
 					addDepsTo(shape, queue);
 				}
 
-				queue.addFirst(mCurrentPoint);
+				queue.addFirst(mCurrentPoint.point);
 				while (queue.size() > 0) {
 					Shape shape = queue.getFirst();
 					queue.removeFirst();
@@ -127,12 +128,14 @@ public class CanvasController {
 					addDepsTo(shape, queue);
 				}
 			} else {
-				mCurrentPoint.commitLocationUpdate();
+				mCurrentPoint.point.commitLocationUpdate();
 			}
+		} else  {
+			mCurrentPoint = pickNearbyPoint(x, y);
 			if (mMode == DRAW_LINE) {
-				mModel.setTempShape(new Line(mStartPoint.point, mCurrentPoint));
+				mModel.setTempShape(new Line(mStartPoint.point, mCurrentPoint.point));
 			} else if (mMode == DRAW_CIRCLE) {
-				mModel.setTempShape(new Circle(mStartPoint.point, mCurrentPoint));
+				mModel.setTempShape(new Circle(mStartPoint.point, mCurrentPoint.point));
 			}
 		}
 		mView.redraw();
@@ -142,13 +145,12 @@ public class CanvasController {
 		mMode = mode;
 	}
 
-	static final float MAX_SNAP_DISTANCE = 20;
-
-	static private class PointAndDistance {
-		ExplicitPoint point;
-		Shape shape0, shape1;
-		double distance;
+	public void onReset() {
+		mModel.clear();
+		mView.redraw();
 	}
+	
+	static final float MAX_SNAP_DISTANCE = 20;
 
 	private PointAndDistance pickNearbyPoint(float x, float y) {
 		PointAndDistance nearestUserDefinedPoint = findNearestUserDefinedPoint(x, y);
@@ -158,7 +160,12 @@ public class CanvasController {
 				return nearestUserDefinedPoint;
 			}
 		}
-		return nearestIntersection;
+		if (nearestIntersection != null) {
+			return nearestIntersection;
+		}
+		PointAndDistance pd = new PointAndDistance();
+		pd.point = new ExplicitPoint(x,  y);
+		return pd;
 	}
 
 	private final String TAG = "CanvasController";
