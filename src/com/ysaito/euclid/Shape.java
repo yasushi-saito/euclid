@@ -7,17 +7,48 @@ import android.util.Log;
 public abstract class Shape {
 	// public abstract StateId stateId();
 	public abstract double distanceFrom(double x, double y);
-	public abstract boolean prepareLocationUpdate();
-	public abstract void commitLocationUpdate();
-	public abstract void abortLocationUpdate();
+	public abstract boolean prepareLocationUpdate(int txnId);
+	public abstract void commitLocationUpdate(int txnId);
+	public abstract void abortLocationUpdate(int txnId);
+	public abstract int lastTransactionId();
 	
 	private Vector<Shape> mDeps;
+	private final int mId;
+	private static int mNextId = 0;
+
 	public Shape() {
 		mDeps = null;
+		mId = mNextId++;
+	}
+
+	public final int id() { 
+		return mId; 
+	}
+	
+	@Override public String toString() {
+		StringBuilder b = new StringBuilder();
+		b.append("id=");
+		b.append(mId);
+		if (mDeps != null) {
+			b.append(" deps={");
+			for (int i = 0; i < mDeps.size(); ++i) {
+				if (i > 0) b.append(",");
+				b.append(mDeps.get(i).id());
+			}
+			b.append("}");
+		}
+		return b.toString();
+	}
+	public final void removeDependency(Shape child) {
+		boolean removed = mDeps.remove(child);
+		if (Util.debugMode) Util.assertTrue(removed, toString());
 	}
 	
 	public final void addDependency(Shape child) {
 		if (mDeps == null) mDeps = new Vector<Shape>();
+		if (Util.debugMode) {
+			Util.assertFalse(mDeps.contains(child), child.toString());
+		}
 		mDeps.add(child);
 	}
 	
@@ -127,7 +158,7 @@ public abstract class Shape {
 				return circleCircleIntersection((Circle)shape1, (Circle)shape2);
 			}
 		}
-		Log.wtf("Blah",  "Blah4");
+		if (Util.debugMode) Util.assertFalse(true, "shape1=" + shape1.toString() + " shape2=" + shape2.toString());
 		return null;
 	}
 }

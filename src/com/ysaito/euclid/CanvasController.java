@@ -14,6 +14,61 @@ public class CanvasController {
 	static final int DRAW_CIRCLE = 3;
 	int mMode;
 
+	private Vector<UndoEntry> mUndos;
+	PointAndDistance mStartPoint;
+	PointAndDistance mCurrentPoint;
+	UndoEntry mCurrentUndo;
+	
+	static private abstract class UndoEntry {
+		public abstract void apply(CanvasModel model);
+	}
+	
+	static private class UndoMoveEntry extends UndoEntry {
+		public UndoMoveEntry(ExplicitPoint p) {
+			point = p;
+			oldX = p.x();
+			oldY = p.y();
+		}
+		@Override public void apply(CanvasModel model) {
+			tryMovePoint(point, oldX, oldY);
+		}
+		
+		public final ExplicitPoint point;
+		public final double oldX, oldY; 
+	}
+	
+	static private class UndoDrawShapeEntry extends UndoEntry {
+		UndoDrawShapeEntry() { 
+			mShapes = null;
+			mDeps = null;
+		}
+		@Override public void apply(CanvasModel model) {
+			for (int i = mDeps.size() - 1; i >= 0; --i) {
+				Dep d = mDeps.get(i);
+				d.parent.removeDependency(d.child);
+			}
+			for (int i = mShapes.size() - 1; i >= 0; --i) {
+				model.removeShape(mShapes.get(i));
+			}
+		}
+		public final void addShapeToRemove(Shape s) {
+			if (mShapes == null) mShapes = new Vector<Shape>();
+			mShapes.add(s);
+		}
+		public final void addDepToRemove(Shape parent, Shape child) {
+			if (mDeps == null) mDeps = new Vector<Dep>();
+			Dep d = new Dep();
+			d.parent = parent;
+			d.child = child;
+			mDeps.add(d);
+		}
+		static private class Dep {
+			Shape parent, child;
+		}
+		private Vector<Shape> mShapes;
+		private Vector<Dep> mDeps;	
+	}
+	
 	static private class PointAndDistance {
 		Point point;
 		Shape shape0, shape1;
@@ -29,59 +84,78 @@ public class CanvasController {
 		}
 	}
 
-	PointAndDistance mStartPoint;
-	PointAndDistance mCurrentPoint;
-	
 	public CanvasController(CanvasModel model, CanvasView view) {
 		mModel = model;
 		mView = view;
 		mMode = MOVE;
+		mUndos = new Vector<UndoEntry>();
 	}
+	
 	public void onTouchStart(float x, float y) {
 		if (mMode == MOVE) {
-			mStartPoint = findNearestUserDefinedPoint(x, y);
-			if (mStartPoint != null) {
-				mCurrentPoint = mStartPoint.clone();
+			mCurrentPoint = findNearestUserDefinedPoint(x, y);
+			if (mCurrentPoint != null) {
+				mCurrentUndo = new UndoMoveEntry((ExplicitPoint)mCurrentPoint.point);
+				if (false) {
+					Log.d(TAG, "Move: " + mCurrentPoint.point.toString());
+					Vector<Shape> shapes = mModel.shapes();
+					for (int i = 0; i < shapes.size(); ++i) {
+						Log.d(TAG, "Shape " + i + ": " + shapes.get(i).toString());
+					}
+				}
 			}
 		} else if (mMode == DRAW_LINE || mMode == DRAW_CIRCLE) {
 			mStartPoint = pickNearbyPoint(x, y);
 			mCurrentPoint = mStartPoint.clone();
+			// mCurrentUndo is filled later
 		}
 		onTouchMove(x, y);
 	}
 	public void onTouchEnd(float x, float y) {
-		if (mStartPoint == null) return;
+		if (mCurrentPoint == null) return;
 		
 		onTouchMove(x, y);
-		if (mMode == DRAW_LINE || mMode == DRAW_CIRCLE) {
-			mModel.addShape(mCurrentPoint.point);
+		if (mMode == MOVE) {
+			mUndos.add(mCurrentUndo);
+		} else if (mMode == DRAW_LINE || mMode == DRAW_CIRCLE) {
+			UndoDrawShapeEntry u = new UndoDrawShapeEntry(); // the fields are filled later
 			Point p0;
 			if (mStartPoint.shape0 == null) {
 				p0 = mStartPoint.point;
-				mModel.addShape(mStartPoint.point);  // TODO: remove dup
+				if (!mModel.shapes().contains(p0)) mModel.addShape(p0);
+				u.addShapeToRemove(p0);
 			} else {
-				// p0 = new DerivedPoint(mStartPoint.shape0, mStartPoint.shape1, x, y);
 				p0 = mStartPoint.point;
 				mStartPoint.shape0.addDependency(p0);
 				mStartPoint.shape1.addDependency(p0);				
+				u.addDepToRemove(mStartPoint.shape0, p0);				
+				u.addDepToRemove(mStartPoint.shape1, p0);								
 			}
 			Point p1;
 			if (mCurrentPoint.shape0 == null) {
 				p1 = mCurrentPoint.point;
-				mModel.addShape(mCurrentPoint.point);
+				if (!mModel.shapes().contains(p1)) mModel.addShape(p1);
+				u.addShapeToRemove(p1);				
 			} else {
 				p1 = mCurrentPoint.point;				
-				// p1 = new DerivedPoint(mCurrentPoint.shape0, mCurrentPoint.shape1, x, y);
+				mCurrentPoint.shape0.addDependency(p1);
+				mCurrentPoint.shape1.addDependency(p1);				
+				u.addDepToRemove(mCurrentPoint.shape0, p1);				
+				u.addDepToRemove(mCurrentPoint.shape1, p1);								
 			}
 			Shape shape = (mMode == DRAW_LINE) ? new Line(p0, p1) : new Circle(p0, p1);
 			
 			mModel.addShape(shape);
-			if (p0 instanceof ExplicitPoint) {
+			u.addShapeToRemove(shape);
+			if (true || p0 instanceof ExplicitPoint) {
 				p0.addDependency(shape);
+				u.addDepToRemove(p0, shape);
 			}
-			if (p1 instanceof ExplicitPoint) {
+			if (true || p1 instanceof ExplicitPoint) {
 				p1.addDependency(shape);
+				u.addDepToRemove(p1, shape);
 			}
+			mUndos.add(u);
 		}
 		mStartPoint = null;
 		mCurrentPoint = null;
@@ -92,41 +166,50 @@ public class CanvasController {
 		Vector<Shape> d = shape.dependencies();
 		if (d != null) {
 			for (int i = 0; i < d.size(); ++i) {
-				deps.addLast(d.get(i));
+				final Shape s = d.get(i);
+				deps.remove(s);
+				deps.addLast(s);
 			}
+		}
+	}
+	
+	private static int mNextTransactionId = 0;
+	
+	private static boolean tryMovePoint(ExplicitPoint point, double x, double y) {
+		int txnId = mNextTransactionId++;
+		point.setTempLocation(txnId, x, y);
+		if (point.dependencies() != null) {
+			LinkedList<Shape> queue = new LinkedList<Shape>();
+			addDepsTo(point, queue); 
+			boolean ok = true;
+			while (queue.size() > 0) {
+				Shape shape = queue.removeFirst();
+				if (!shape.prepareLocationUpdate(txnId)) {
+					ok = false;
+				}
+				addDepsTo(shape, queue);
+			}
+			
+			queue.addFirst(point);
+			while (queue.size() > 0) {
+				Shape shape = queue.removeFirst();
+				if (ok) {
+					shape.commitLocationUpdate(txnId);
+				} else {
+					shape.abortLocationUpdate(txnId);
+				}
+				addDepsTo(shape, queue);
+			}
+			return ok;
+		} else {
+			point.commitLocationUpdate(txnId);
+			return true;
 		}
 	}
 	public void onTouchMove(float x, float y) {
 		if (mCurrentPoint == null) return;
 		if (mMode == MOVE) {
-			((ExplicitPoint)mCurrentPoint.point).setTempLocation(x, y);
-			if (mCurrentPoint.point.dependencies() != null) {
-				LinkedList<Shape> queue = new LinkedList<Shape>();
-				addDepsTo(mCurrentPoint.point, queue); 
-				boolean ok = true;
-				while (queue.size() > 0) {
-					Shape shape = queue.getFirst();
-					queue.removeFirst();
-					if (!shape.prepareLocationUpdate()) {
-						ok = false;
-					}
-					addDepsTo(shape, queue);
-				}
-
-				queue.addFirst(mCurrentPoint.point);
-				while (queue.size() > 0) {
-					Shape shape = queue.getFirst();
-					queue.removeFirst();
-					if (ok) {
-						shape.commitLocationUpdate();
-					} else {
-						shape.abortLocationUpdate();
-					}
-					addDepsTo(shape, queue);
-				}
-			} else {
-				mCurrentPoint.point.commitLocationUpdate();
-			}
+			tryMovePoint(((ExplicitPoint)mCurrentPoint.point), x, y);
 		} else  {
 			mCurrentPoint = pickNearbyPoint(x, y);
 			if (mMode == DRAW_LINE) {
@@ -147,7 +230,15 @@ public class CanvasController {
 		mView.redraw();
 	}
 	
-	static final float MAX_SNAP_DISTANCE = 40;
+	public void onUndo() {
+		if (mUndos.size() > 0) {
+			UndoEntry u = mUndos.remove(mUndos.size() - 1);
+			u.apply(mModel);
+		}
+		mView.redraw();
+	}
+	
+	static final float MAX_SNAP_DISTANCE = 60;
 
 	private PointAndDistance pickNearbyPoint(float x, float y) {
 		PointAndDistance nearestUserDefinedPoint = findNearestUserDefinedPoint(x, y);
@@ -173,10 +264,12 @@ public class CanvasController {
 		int n = allShapes.size();
 		for (int i = 0; i < n; ++i) {
 			Shape shape = allShapes.get(i);
-			double d = shape.distanceFrom(x, y);
-			if (d < MAX_SNAP_DISTANCE) {
-				if (nearbyShapes == null) nearbyShapes = new Vector<Shape>();
-				nearbyShapes.add(shape);
+			if (!(shape instanceof Point)) {
+				double d = shape.distanceFrom(x, y);
+				if (d < MAX_SNAP_DISTANCE) {
+					if (nearbyShapes == null) nearbyShapes = new Vector<Shape>();
+					nearbyShapes.add(shape);
+				}
 			}
 		}
 		if (nearbyShapes == null) return null;

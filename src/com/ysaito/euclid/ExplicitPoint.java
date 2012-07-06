@@ -22,30 +22,48 @@ public class ExplicitPoint extends Point {
 	@Override public double x() { return (mHasTempLocation ? mTempX : mX); }
 	@Override public double y() { return (mHasTempLocation ? mTempY : mY); }
 	
-	public void setTempLocation(double x, double y) {
+	public final void setTempLocation(int txnId, double x, double y) {
 		mTempX = x;
 		mTempY = y;
 		mHasTempLocation = true;
+		mLastTransactionId = txnId;
 	}
 	
-	@Override public boolean prepareLocationUpdate() {
-		Log.wtf(TAG, "??? ExplicitPoint");
-		return false;
-	}
-
-	@Override public void commitLocationUpdate() {
-		Util.assertTrue(mHasTempLocation);
+	@Override public void commitLocationUpdate(int txnId) {
+		if (Util.debugMode) {
+			Util.assertTrue(mHasTempLocation, toString());
+			Util.assertTrue(txnId == mLastTransactionId, toString());
+		}
 		mX = mTempX;
 		mY = mTempY;
 		mHasTempLocation = false;
 	}
 	
-	@Override public void abortLocationUpdate() {
-		Util.assertTrue(mHasTempLocation);
+	@Override public void abortLocationUpdate(int txnId) {
+		if (Util.debugMode) {
+			Util.assertTrue(mHasTempLocation, toString());
+			Util.assertTrue(txnId == mLastTransactionId, toString());
+		}
 		mHasTempLocation = false;
 	}
 	
+	private int mLastTransactionId;
+	
+	@Override public boolean prepareLocationUpdate(int txnId) {
+		if (Util.debugMode) Util.assertFalse(true, toString());
+		return true;
+	}
+	@Override public int lastTransactionId() { return mLastTransactionId; }
+	
+	
 	@Override public String toString() {
-		return "explicit(" + mX + "," + mY + ")";
+		StringBuilder b = new StringBuilder("ExplicitPoint ");
+		b.append(super.toString());
+		b.append("(");
+		b.append(mX);
+		b.append(",");
+		b.append(mY);
+		b.append(")");
+		return b.toString();
 	}
 }

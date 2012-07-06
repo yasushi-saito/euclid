@@ -9,16 +9,23 @@ public class Circle extends Shape {
 		center = pCenter;
 		radiusControl = pRadius;
 	}
-		
-	@Override public boolean prepareLocationUpdate() {
+	
+	private int mLastTransactionId;
+	
+	@Override public void commitLocationUpdate(int txnId) {
+		if (Util.debugMode) Util.assertTrue(txnId == mLastTransactionId, toString());
+	}
+	
+	@Override public void abortLocationUpdate(int txnId) {
+		if (Util.debugMode) Util.assertTrue(txnId == mLastTransactionId, toString());
+	}
+	@Override public boolean prepareLocationUpdate(int txnId) {
+		//Util.assertTrue(txnId == center.lastTransactionId());
+		//Util.assertTrue(txnId == radiusControl.lastTransactionId());		
+		mLastTransactionId = txnId;
 		return true;
 	}
-	
-	@Override public void commitLocationUpdate() {
-	}
-	
-	@Override public void abortLocationUpdate() {
-	}
+	@Override public int lastTransactionId() { return mLastTransactionId; }
 	
 	public double radius() {
 		final double dx = center.x() - radiusControl.x();
@@ -30,6 +37,12 @@ public class Circle extends Shape {
 		return Math.abs(Util.distance(center.x(), center.y(), x, y) - radius());
 	}
 	@Override public String toString() {
-		return "Circle center=" + center.toString() + " radius=" + radiusControl.toString();
+		StringBuilder b = new StringBuilder("Circle ");
+		b.append(super.toString());
+		b.append(" center=");
+		b.append(center.toString());
+		b.append(" radius=");
+		b.append(radiusControl.toString());
+		return b.toString();
 	}
 }

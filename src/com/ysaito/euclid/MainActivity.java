@@ -30,6 +30,12 @@ public class MainActivity extends Activity {
     			mController.onReset();
     		}
     	});
+    	button = (Button)findViewById(R.id.button_undo);
+    	button.setOnClickListener(new View.OnClickListener() {
+    		public void onClick(View v) {
+    			mController.onUndo();
+    		}
+    	});
     }
 
     static final String TAG = "EuclidMain";
